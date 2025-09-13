@@ -1,0 +1,13 @@
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Permission, PermissionSchema } from './schemas/permission.schema';
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: Permission.name, schema: PermissionSchema }]),
+  ],
+  controllers: [],
+  providers: [],
+  exports: [],
+})
+export class PermissionsModule {}
