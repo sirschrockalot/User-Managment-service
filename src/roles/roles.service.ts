@@ -262,20 +262,30 @@ export class RolesService {
         isActive: true,
       },
       {
-        name: 'Manager',
-        description: 'Management access to team and processes',
+        name: 'Acquisitions',
+        description: 'Role for acquisition team members',
         permissions: [
-          'users:read', 'users:write',
-          'leads:read', 'leads:write', 'leads:delete',
+          'leads:read', 'leads:write',
           'transactions:read', 'transactions:write',
-          'analytics:read', 'settings:read'
+          'analytics:read'
         ],
         isSystem: true,
         isActive: true,
       },
       {
-        name: 'Agent',
-        description: 'Standard user access to core features',
+        name: 'Dispositions',
+        description: 'Role for disposition team members',
+        permissions: [
+          'leads:read', 'leads:write',
+          'transactions:read', 'transactions:write',
+          'analytics:read'
+        ],
+        isSystem: true,
+        isActive: true,
+      },
+      {
+        name: 'Transaction Coordinator',
+        description: 'Role for transaction coordination team members',
         permissions: [
           'leads:read', 'leads:write',
           'transactions:read', 'transactions:write',
