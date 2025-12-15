@@ -284,6 +284,28 @@ export class RolesService {
         isActive: true,
       },
       {
+        name: 'Aquisition Manager',
+        description: 'Acquisition manager with elevated permissions',
+        permissions: [
+          'leads:read', 'leads:write', 'leads:delete',
+          'transactions:read', 'transactions:write',
+          'analytics:read'
+        ],
+        isSystem: true,
+        isActive: true,
+      },
+      {
+        name: 'Disposition Agent',
+        description: 'Disposition agent handling sales and assignments',
+        permissions: [
+          'leads:read', 'leads:write',
+          'transactions:read', 'transactions:write',
+          'analytics:read'
+        ],
+        isSystem: true,
+        isActive: true,
+      },
+      {
         name: 'Transaction Coordinator',
         description: 'Role for transaction coordination team members',
         permissions: [

@@ -163,6 +163,16 @@ export class UsersController {
     return this.usersService.deactivate(id);
   }
 
+  @Delete('by-email')
+  @ApiOperation({ summary: 'Delete user by email' })
+  @ApiQuery({ name: 'email', required: true, description: 'User email' })
+  @ApiResponse({ status: 204, description: 'User deleted successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeByEmail(@Query('email') email: string): Promise<void> {
+    return this.usersService.removeByEmail(email);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete user' })
   @ApiParam({ name: 'id', description: 'User ID' })

@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
@@ -13,6 +15,7 @@ import { plainToClass } from 'class-transformer';
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly http: HttpService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
@@ -22,7 +25,31 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
-    // Hash password
+    // Provision account in Auth Service first so login works immediately
+    const authBaseUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3001';
+    try {
+      await firstValueFrom(
+        this.http.post(`${authBaseUrl}/api/auth/register`, {
+          email: createUserDto.email,
+          password: createUserDto.password,
+          firstName: createUserDto.firstName,
+          lastName: createUserDto.lastName,
+          username: (createUserDto.email || '').split('@')[0],
+          companyName: process.env.COMPANY_NAME || 'DealCycle',
+          // Request auto-activation for admin-provisioned users
+          adminAutoActivate: true,
+          provisionKey: process.env.ADMIN_PROVISION_SECRET,
+        })
+      );
+    } catch (error: any) {
+      // If user already exists in auth, proceed; otherwise surface error
+      const status = error?.response?.status;
+      if (status !== 409) {
+        throw new BadRequestException('Failed to provision auth account');
+      }
+    }
+
+    // Hash password for local store
     const saltRounds = parseInt(process.env.BCRYPT_ROUNDS || '12');
     const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
 
@@ -164,7 +191,41 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    // Attempt to delete from Auth Service as well (best-effort)
+    const authBaseUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3001';
+    try {
+      // Try to find auth user id by querying list with email filter if supported
+      // Fallback: attempt delete by id if client stores mapping (not available here)
+      // For now, call a search endpoint if present; otherwise ignore silently
+      // Note: Auth API requires admin JWT; if not configured, this is best-effort
+      await firstValueFrom(
+        this.http.delete(`${authBaseUrl}/api/auth/users`, {
+          params: { email: user.email },
+        })
+      );
+    } catch (e) {
+      // Ignore failures in auth cleanup; local deletion proceeds
+    }
+
     await this.userModel.findByIdAndDelete(id).exec();
+  }
+
+  async removeByEmail(email: string): Promise<void> {
+    const user = await this.userModel.findOne({ email }).exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const authBaseUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3001';
+    try {
+      await firstValueFrom(
+        this.http.delete(`${authBaseUrl}/api/auth/users`, { params: { email } })
+      );
+    } catch (e) {
+      // ignore auth delete failure; proceed with local delete
+    }
+
+    await this.userModel.findByIdAndDelete(user._id).exec();
   }
 
   async deactivate(id: string): Promise<UserResponseDto> {
